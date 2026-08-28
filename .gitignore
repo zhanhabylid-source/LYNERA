@@ -1,0 +1,21 @@
+node_modules
+.env
+.env.*
+!.env.example
+!.env.production.example
+!deploy/.env.production.example
+database/*.sqlite
+public/hot
+*.env
+credentials.json
+*.pem
+*.key
+.credentials
+
+# Backup files bisa memuat data tenant asli. Simpan di server, JANGAN commit.
+/storage/app/backups/*
+!/storage/app/backups/.gitkeep
+
+# Files ini berisi log/report internal & jangan di-commit
+/memory/
+/test_reports/

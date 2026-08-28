@@ -1,0 +1,8 @@
+composer=2.5.5-1+deb12u5
+cron=3.0pl1-162
+php-cli=2:8.2+93
+php-curl=2:8.2+93
+php-mbstring=2:8.2+93
+php-sqlite3=2:8.2+93
+php-xml=2:8.2+93
+php-zip=2:8.2+93
