@@ -179,11 +179,23 @@ class User extends Authenticatable implements MustVerifyEmail
             return null;
         }
 
-        if (! Storage::disk('public')->exists($path)) {
+        // Strip any leftover "public/" prefix (defensive — Storage::url handles it too).
+        $relative = ltrim(Str::replaceFirst('public/', '', $path), '/');
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($relative)) {
             return null;
         }
 
-        return '/storage/'.ltrim(Str::replaceFirst('public/', '', $path), '/');
+        // Cache-buster keyed off the file's mtime so browsers refresh after re-upload.
+        try {
+            $mtime = $disk->lastModified($relative);
+        } catch (\Throwable $e) {
+            $mtime = null;
+        }
+
+        $url = $disk->url($relative); // Menghormati APP_URL & disk config
+        return $mtime ? $url.'?v='.$mtime : $url;
     }
 
     public function primaryPaymentAccount(): ?TenantPaymentAccount
