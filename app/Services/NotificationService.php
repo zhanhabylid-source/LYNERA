@@ -17,27 +17,72 @@ class NotificationService
 
     public function sendWhatsApp(string $phone, string $message): void
     {
-        // Placeholder for real WhatsApp gateway integration.
         Log::info('WhatsApp notification queued', [
             'phone' => $phone,
             'message' => $message,
         ]);
     }
 
-    public function sendWelcomeMessage(User $user, Subscription $subscription): void
+    public function sendWelcomeMessage(User $user, Subscription $subscription): bool
     {
-        $planDetail = $this->planService->detail($subscription->plan);
-        $message = sprintf(
-            'Selamat datang! Paket Anda: %s. %s.',
-            strtoupper((string) ($planDetail['name'] ?? $subscription->plan)),
-            (string) ($planDetail['booking_limit_label'] ?? '')
-        );
+        try {
+            $planDetail = $this->planService->detail($subscription->plan);
+            $planName = strtoupper((string) ($planDetail['name'] ?? $subscription->plan));
 
-        Log::info('Welcome onboarding message', [
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'message' => $message,
-        ]);
+            Mail::send('emails.notification', [
+                'preheader' => 'Selamat datang di LYNERA',
+                'badge' => 'Akun Baru',
+                'heading' => 'Selamat Datang di LYNERA!',
+                'intro' => sprintf('Halo %s, akun Anda berhasil dibuat dengan paket %s. Kelola jadwal MUA Anda dengan lebih mudah dan profesional.', $user->name, $planName),
+                'details' => [
+                    'Nama Studio' => (string) ($user->studio_name ?? $user->name),
+                    'Paket Aktif' => $planName,
+                    'Email Akun' => $user->email,
+                ],
+                'actionLabel' => 'Buka Dasbor',
+                'actionUrl' => route('admin.dashboard'),
+                'outro' => 'Jika ada pertanyaan, jangan ragu untuk menghubungi tim dukungan kami.',
+            ], static function ($mail) use ($user): void {
+                $mail->to($user->email)->subject('Selamat Datang di LYNERA - Platform MUA Modern');
+            });
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send welcome message email.', [
+                'user_id' => $user->id,
+                'message' => $exception->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    public function sendPlanActivationNotice(User $tenant, string $planName, string $expiredAt): bool
+    {
+        try {
+            Mail::send('emails.notification', [
+                'preheader' => 'Aktivasi paket langganan berhasil',
+                'badge' => 'Langganan',
+                'heading' => 'Paket Berhasil Diaktifkan!',
+                'intro' => sprintf('Halo %s, paket langganan %s Anda telah aktif dan dapat digunakan hingga tanggal %s.', $tenant->name, strtoupper($planName), $expiredAt),
+                'details' => [
+                    'Paket' => strtoupper($planName),
+                    'Berlaku Sampai' => $expiredAt,
+                ],
+                'actionLabel' => 'Kelola Billing',
+                'actionUrl' => route('billing.index'),
+                'outro' => 'Nikmati kemudahan pencatatan kuota dan fitur lengkap tanpa batas.',
+            ], static function ($mail) use ($tenant): void {
+                $mail->to($tenant->email)->subject('Aktivasi Paket Berhasil - LYNERA');
+            });
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send plan activation email.', [
+                'tenant_id' => $tenant->id,
+                'message' => $exception->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     public function sendPublicBookingAlert(User $tenant, Booking $booking): bool

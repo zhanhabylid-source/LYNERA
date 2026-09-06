@@ -121,19 +121,19 @@
                                     $bookingLocation = trim((string) ($booking->location ?? ''));
                                     $studioMaps = trim((string) ($booking->tenant?->studio_maps_link ?? ''));
                                     $studioAddress = trim((string) ($booking->tenant?->studio_location ?? ''));
-                                    $isStudioService = $bookingLocation !== '' && ($bookingLocation === $studioMaps || $bookingLocation === $studioAddress);
+                                    $isStudioService = $bookingLocation === '' || strtolower($bookingLocation) === 'studio' || str_contains(strtolower($bookingLocation), 'studio') || $bookingLocation === $studioMaps || $bookingLocation === $studioAddress;
                                     if ($isStudioService) {
-                                        $studioLocationForCustomer = $studioMaps !== '' ? $studioMaps : ($studioAddress !== '' ? $studioAddress : $bookingLocation);
+                                        $studioLocationForCustomer = $studioMaps !== '' ? $studioMaps : ($studioAddress !== '' ? $studioAddress : ($bookingLocation !== '' ? $bookingLocation : 'Studio'));
                                         $waLocationSection =
-                                            "- Jenis Layanan: Studio {$tenantName}\n".
+                                            "- Jenis Layanan: Datang ke Studio {$tenantName}\n".
                                             "- Lokasi Studio: {$studioLocationForCustomer}\n".
-                                            "- Konfirmasi: Lokasi Anda menggunakan layanan {$tenantName} di lokasi berikut (tautan map di atas).\n";
+                                            "- Konfirmasi: Lokasi Anda menggunakan layanan {$tenantName} di studio.\n";
                                     } else {
                                         $homeLocationForCustomer = $bookingLocation !== '' ? $bookingLocation : '-';
                                         $waLocationSection =
-                                            "- Jenis Layanan: Home Service\n".
-                                            "- Lokasi Home Service: {$homeLocationForCustomer}\n".
-                                            "- Konfirmasi: Alamat/lokasi di atas adalah lokasi yang Anda tambahkan pada form booking.\n";
+                                            "- Jenis Layanan: Layanan ke Rumah\n".
+                                            "- Lokasi: {$homeLocationForCustomer}\n".
+                                            "- Konfirmasi: Alamat di atas adalah lokasi home service.\n";
                                     }
                                     $serviceSubtotal = (float) $booking->bookingItems->sum('subtotal');
                                     if ($serviceSubtotal <= 0) {
@@ -164,11 +164,11 @@
                                     </td>
                                     <td class="px-4 py-3 text-sm">
                                         @php
-                                            $location = trim((string) ($booking->location ?? ''));
-                                            $studioMaps = trim((string) ($booking->tenant?->studio_maps_link ?? ''));
-                                            $studioAddress = trim((string) ($booking->tenant?->studio_location ?? ''));
-                                            $isStudio = $location !== '' && ($location === $studioMaps || $location === $studioAddress);
-                                            $serviceType = $isStudio ? 'Di Studio Kami' : 'Layanan ke Rumah';
+                                            $loc = trim((string) ($booking->location ?? ''));
+                                            $sMap = trim((string) ($booking->tenant?->studio_maps_link ?? ''));
+                                            $sAddr = trim((string) ($booking->tenant?->studio_location ?? ''));
+                                            $isStudio = $loc === '' || strtolower($loc) === 'studio' || str_contains(strtolower($loc), 'studio') || $loc === $sMap || $loc === $sAddr;
+                                            $serviceType = $isStudio ? 'Datang ke Studio' : 'Layanan ke Rumah';
                                             $serviceTypeClass = $isStudio
                                                 ? 'bg-blue-100 text-blue-700'
                                                 : 'bg-rose-100 text-rose-700';
@@ -273,19 +273,19 @@
                             $bookingLocation = trim((string) ($booking->location ?? ''));
                             $studioMaps = trim((string) ($booking->tenant?->studio_maps_link ?? ''));
                             $studioAddress = trim((string) ($booking->tenant?->studio_location ?? ''));
-                            $isStudioService = $bookingLocation !== '' && ($bookingLocation === $studioMaps || $bookingLocation === $studioAddress);
+                            $isStudioService = $bookingLocation === '' || strtolower($bookingLocation) === 'studio' || str_contains(strtolower($bookingLocation), 'studio') || $bookingLocation === $studioMaps || $bookingLocation === $studioAddress;
                             if ($isStudioService) {
-                                $studioLocationForCustomer = $studioMaps !== '' ? $studioMaps : ($studioAddress !== '' ? $studioAddress : $bookingLocation);
+                                $studioLocationForCustomer = $studioMaps !== '' ? $studioMaps : ($studioAddress !== '' ? $studioAddress : ($bookingLocation !== '' ? $bookingLocation : 'Studio'));
                                 $waLocationSection =
-                                    "- Jenis Layanan: Studio {$tenantName}\n".
+                                    "- Jenis Layanan: Datang ke Studio {$tenantName}\n".
                                     "- Lokasi Studio: {$studioLocationForCustomer}\n".
-                                    "- Konfirmasi: Lokasi Anda menggunakan layanan {$tenantName} di lokasi berikut (tautan map di atas).\n";
+                                    "- Konfirmasi: Lokasi Anda menggunakan layanan {$tenantName} di studio.\n";
                             } else {
                                 $homeLocationForCustomer = $bookingLocation !== '' ? $bookingLocation : '-';
                                 $waLocationSection =
-                                    "- Jenis Layanan: Home Service\n".
-                                    "- Lokasi Home Service: {$homeLocationForCustomer}\n".
-                                    "- Konfirmasi: Alamat/lokasi di atas adalah lokasi yang Anda tambahkan pada form booking.\n";
+                                    "- Jenis Layanan: Layanan ke Rumah\n".
+                                    "- Lokasi: {$homeLocationForCustomer}\n".
+                                    "- Konfirmasi: Alamat di atas adalah lokasi home service.\n";
                             }
                             $serviceSubtotal = (float) $booking->bookingItems->sum('subtotal');
                             if ($serviceSubtotal <= 0) {
@@ -310,11 +310,11 @@
                             <p class="text-sm font-semibold text-stone-900">{{ $booking->customer->name }}</p>
                             <p class="text-sm text-stone-700 mt-1">{{ $booking->service->name }}</p>
                             @php
-                                $location = trim((string) ($booking->location ?? ''));
-                                $studioMaps = trim((string) ($booking->tenant?->studio_maps_link ?? ''));
-                                $studioAddress = trim((string) ($booking->tenant?->studio_location ?? ''));
-                                $isStudio = $location !== '' && ($location === $studioMaps || $location === $studioAddress);
-                                $serviceType = $isStudio ? 'Di Studio Kami' : 'Layanan ke Rumah';
+                                $loc = trim((string) ($booking->location ?? ''));
+                                $sMap = trim((string) ($booking->tenant?->studio_maps_link ?? ''));
+                                $sAddr = trim((string) ($booking->tenant?->studio_location ?? ''));
+                                $isStudio = $loc === '' || strtolower($loc) === 'studio' || str_contains(strtolower($loc), 'studio') || $loc === $sMap || $loc === $sAddr;
+                                $serviceType = $isStudio ? 'Datang ke Studio' : 'Layanan ke Rumah';
                                 $serviceTypeClass = $isStudio
                                     ? 'bg-blue-100 text-blue-700'
                                     : 'bg-rose-100 text-rose-700';
@@ -382,4 +382,3 @@
         </div>
     </div>
 </x-app-layout>
-

@@ -96,7 +96,13 @@ class PaymentService
         ]);
         $this->billingLogService->logPayment($updated, 'payment_dp_marked_paid');
 
+        // Otomatis ubah status booking menjadi confirmed saat DP dibayar
         $booking = $updated->booking;
+        if ($booking->status !== Booking::STATUS_COMPLETED && $booking->status !== 'confirmed') {
+            $booking->status = 'confirmed';
+            $booking->save();
+        }
+
         $this->notificationService->sendWhatsApp(
             $booking->customer->phone,
             sprintf(
@@ -255,6 +261,11 @@ class PaymentService
                 'dp_paid_at' => $payment->dp_paid_at ?? Carbon::now(),
                 'paid_at' => $payment->paid_at ?? Carbon::now(),
             ]);
+
+            if ($booking->status !== Booking::STATUS_COMPLETED) {
+                $booking->status = Booking::STATUS_COMPLETED;
+                $booking->save();
+            }
 
             $this->billingLogService->logPayment($updatedPayment, 'payment_auto_settled_after_service_passed');
             $settledCount++;

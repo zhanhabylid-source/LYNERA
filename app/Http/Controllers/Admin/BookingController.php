@@ -35,6 +35,9 @@ class BookingController extends Controller
     {
         $tenant = auth()->user();
 
+        // Otomatis ubah pembayaran & status booking yang waktunya sudah lewat menjadi Selesai
+        $this->paymentService->autoSettlePassedServiceBookings($tenant?->id);
+
         return view('admin.bookings.index', [
             'bookings' => $this->bookingService->paginate(),
             'tenant' => $tenant,
