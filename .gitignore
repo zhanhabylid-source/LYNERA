@@ -19,3 +19,4 @@ credentials.json
 # Files ini berisi log/report internal & jangan di-commit
 /memory/
 /test_reports/
+.env
