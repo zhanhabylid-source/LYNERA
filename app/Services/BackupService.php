@@ -294,6 +294,7 @@ class BackupService
 
         if ($ext === 'json') {
             $tmp = $file->getRealPath();
+
             return $this->restoreFromJsonFile($tmp, $preserveUserId);
         }
 
@@ -306,32 +307,96 @@ class BackupService
             File::ensureDirectoryExists($tmpDir, 0755, true);
 
             $zip = new ZipArchive();
-            if ($zip->open($file->getRealPath()) !== true) {
-                throw new RuntimeException('File .zip tidak bisa dibuka.');
-            }
-            $zip->extractTo($tmpDir);
-            $zip->close();
 
-            $jsonPath = $tmpDir.DIRECTORY_SEPARATOR.'data.json';
-            if (! File::exists($jsonPath)) {
+            try {
+                if ($zip->open($file->getRealPath()) !== true) {
+                    throw new RuntimeException('File .zip tidak bisa dibuka.');
+                }
+
+                // Hardening: validate ZIP entries before extracting anything.
+                $entryCount = $zip->numFiles;
+                $maxEntries = 5000;
+                $maxUncompressedBytes = 512 * 1024 * 1024; // 512 MB
+
+                if ($entryCount < 1 || $entryCount > $maxEntries) {
+                    throw new RuntimeException('Isi zip tidak valid atau terlalu banyak file.');
+                }
+
+                $totalUncompressedBytes = 0;
+                $allowedRootFiles = ['data.json', 'README.txt'];
+
+                for ($i = 0; $i < $entryCount; $i++) {
+                    $stat = $zip->statIndex($i);
+
+                    if ($stat === false || ! isset($stat['name'])) {
+                        throw new RuntimeException('Entry zip tidak valid.');
+                    }
+
+                    $name = str_replace('\\', '/', (string) $stat['name']);
+
+                    if (
+                        str_contains($name, "\0") ||
+                        str_starts_with($name, '/') ||
+                        preg_match('/^[A-Za-z]:\//', $name)
+                    ) {
+                        throw new RuntimeException('Isi zip mengandung path yang tidak aman.');
+                    }
+
+                    $parts = explode('/', trim($name, '/'));
+
+                    if (in_array('..', $parts, true)) {
+                        throw new RuntimeException('Isi zip mengandung path traversal.');
+                    }
+
+                    $isAllowedRootFile = in_array($name, $allowedRootFiles, true);
+                    $isStorageEntry = $name === 'storage' || str_starts_with($name, 'storage/');
+
+                    if (! $isAllowedRootFile && ! $isStorageEntry) {
+                        throw new RuntimeException(
+                            'Isi zip mengandung file yang tidak diizinkan: '.$name
+                        );
+                    }
+
+                    $uncompressedSize = (int) ($stat['size'] ?? 0);
+
+                    if ($uncompressedSize < 0) {
+                        throw new RuntimeException('Ukuran entry zip tidak valid.');
+                    }
+
+                    $totalUncompressedBytes += $uncompressedSize;
+
+                    if ($totalUncompressedBytes > $maxUncompressedBytes) {
+                        throw new RuntimeException('Ukuran hasil ekstraksi zip terlalu besar.');
+                    }
+                }
+
+                if ($zip->extractTo($tmpDir) !== true) {
+                    throw new RuntimeException('Isi .zip gagal diekstrak.');
+                }
+
+                $jsonPath = $tmpDir.DIRECTORY_SEPARATOR.'data.json';
+
+                if (! File::isFile($jsonPath)) {
+                    throw new RuntimeException('Isi zip tidak berisi data.json.');
+                }
+
+                $result = $this->restoreFromJsonFile($jsonPath, $preserveUserId);
+
+                // Restore storage files if present.
+                $storageDir = $tmpDir.DIRECTORY_SEPARATOR.'storage';
+
+                if (File::isDirectory($storageDir)) {
+                    $publicRoot = storage_path('app/public');
+                    File::ensureDirectoryExists($publicRoot, 0755, true);
+                    File::copyDirectory($storageDir, $publicRoot);
+                    $result['files_restored'] = true;
+                }
+
+                return $result;
+            } finally {
+                $zip->close();
                 File::deleteDirectory($tmpDir);
-                throw new RuntimeException('Isi zip tidak berisi data.json.');
             }
-
-            $result = $this->restoreFromJsonFile($jsonPath, $preserveUserId);
-
-            // Restore storage files if present.
-            $storageDir = $tmpDir.DIRECTORY_SEPARATOR.'storage';
-            if (File::isDirectory($storageDir)) {
-                $publicRoot = storage_path('app/public');
-                File::ensureDirectoryExists($publicRoot, 0755, true);
-                File::copyDirectory($storageDir, $publicRoot);
-                $result['files_restored'] = true;
-            }
-
-            File::deleteDirectory($tmpDir);
-
-            return $result;
         }
 
         throw new RuntimeException('Format file tidak didukung. Gunakan .json atau .zip.');
