@@ -13,10 +13,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'super_admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'subscription' => \App\Http\Middleware\CheckSubscription::class,
             'not_suspended' => \App\Http\Middleware\EnsureUserNotSuspended::class,
+            'admin_tenant' => \App\Http\Middleware\SetAdminTenantContext::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

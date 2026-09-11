@@ -41,7 +41,7 @@ Route::get('/dashboard', function () {
     return redirect()->route('admin.dashboard');
 })->middleware(['auth', 'not_suspended', 'verified', 'subscription'])->name('dashboard');
 
-Route::middleware(['auth', 'not_suspended', 'subscription'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'not_suspended', 'subscription', 'admin_tenant'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::get('/calendar/events', [CalendarController::class, 'events'])->name('calendar.events');
