@@ -34,7 +34,7 @@
         .pay-method-table { width: 100%; border-collapse: collapse; }
         .pay-method-table td { border: 0; padding: 0; vertical-align: top; }
         .pay-badge { display: inline-block; margin-left: 5px; border-radius: 10px; padding: 2px 6px; background: #ffe4e6; color: #9f1239; font-size: 9px; font-weight: bold; }
-        .pay-qr { width: 240px; height: auto; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px; background: #ffffff; display: block; }
+        .pay-qr { width: 270px; height: auto; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px; background: #ffffff; display: block; }
         .small { color: #6b7280; font-size: 10px; margin-top: 14px; }
     </style>
 </head>
