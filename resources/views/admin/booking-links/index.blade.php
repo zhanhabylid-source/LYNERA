@@ -139,6 +139,12 @@
                                 onclick="navigator.clipboard.writeText('{{ route('public.booking.show', $form->token) }}').then(() => alert('Tautan berhasil disalin'))">
                                 Salin
                             </button>
+                            <a
+                                href="{{ route('admin.booking-links.edit', $form) }}"
+                                class="px-4 py-2 rounded-xl bg-rose-500 text-white text-sm hover:bg-rose-600 min-h-[44px] flex items-center justify-center"
+                            >
+                                Edit
+                            </a>
                             <form method="POST" action="{{ route('admin.booking-links.extend', $form) }}">
                                 @csrf
                                 @method('PATCH')

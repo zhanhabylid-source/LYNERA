@@ -47,6 +47,37 @@ class PublicBookingFormService
         ]);
     }
 
+    public function updateForTenant(
+        PublicBookingForm $form,
+        int $tenantId,
+        array $serviceIds,
+        ?int $maxSubmissions = null,
+        ?float $transportFee = null,
+        string $termsTitle = 'Syarat & Ketentuan Booking',
+        string $termsContent = ''
+    ): PublicBookingForm {
+        if ((int) $form->tenant_id !== $tenantId) {
+            abort(404);
+        }
+
+        $currentSettings = is_array($form->settings) ? $form->settings : [];
+        $currentSettings['service_ids'] = array_values(array_unique(
+            array_map('intval', $serviceIds)
+        ));
+        $currentSettings['transport_fee'] = round(max(0, (float) ($transportFee ?? 0)), 2);
+        $currentSettings['terms'] = [
+            'title' => trim($termsTitle),
+            'content' => trim($termsContent),
+        ];
+
+        $form->forceFill([
+            'settings' => $currentSettings,
+            'max_submissions' => $maxSubmissions,
+        ])->save();
+
+        return $form->refresh();
+    }
+
     public function findAccessibleByToken(string $token): ?PublicBookingForm
     {
         $form = PublicBookingForm::withoutGlobalScopes()

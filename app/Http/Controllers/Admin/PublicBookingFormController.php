@@ -46,6 +46,44 @@ class PublicBookingFormController extends Controller
             ->with('success', 'Tautan booking berhasil dibuat: '.route('public.booking.show', $form->token));
     }
 
+    public function edit(PublicBookingForm $publicBookingForm): View
+    {
+        $settings = is_array($publicBookingForm->settings) ? $publicBookingForm->settings : [];
+        $terms = is_array($settings['terms'] ?? null) ? $settings['terms'] : [];
+
+        return view('admin.booking-links.edit', [
+            'form' => $publicBookingForm,
+            'services' => Service::query()->orderBy('name')->get(['id', 'name']),
+            'selectedServiceIds' => array_values(array_map(
+                'intval',
+                array_filter($settings['service_ids'] ?? [], fn ($id) => is_numeric($id))
+            )),
+            'transportFee' => max(0, (float) ($settings['transport_fee'] ?? 0)),
+            'termsTitle' => trim((string) ($terms['title'] ?? '')) ?: 'Syarat & Ketentuan Booking',
+            'termsContent' => trim((string) ($terms['content'] ?? '')),
+        ]);
+    }
+
+    public function update(
+        StorePublicBookingFormRequest $request,
+        PublicBookingForm $publicBookingForm
+    ): RedirectResponse
+    {
+        $this->publicBookingFormService->updateForTenant(
+            $publicBookingForm,
+            (int) auth()->id(),
+            $request->validated('service_ids'),
+            $request->validated('max_submissions'),
+            $request->validated('transport_fee'),
+            $request->validated('terms_title'),
+            $request->validated('terms_content')
+        );
+
+        return redirect()
+            ->route('admin.booking-links.index')
+            ->with('success', 'Tautan booking berhasil diperbarui.');
+    }
+
     public function deactivate(PublicBookingForm $publicBookingForm): RedirectResponse
     {
         $this->publicBookingFormService->deactivate($publicBookingForm);

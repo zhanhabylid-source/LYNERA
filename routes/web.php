@@ -57,6 +57,8 @@ Route::middleware(['auth', 'not_suspended', 'subscription', 'admin_tenant'])->pr
     Route::patch('/bookings/terms', [BookingController::class, 'updateTerms'])->name('bookings.terms.update');
     Route::get('/booking-links', [PublicBookingFormController::class, 'index'])->name('booking-links.index');
     Route::post('/booking-links', [PublicBookingFormController::class, 'store'])->name('booking-links.store');
+    Route::get('/booking-links/{publicBookingForm}/edit', [PublicBookingFormController::class, 'edit'])->name('booking-links.edit');
+    Route::put('/booking-links/{publicBookingForm}', [PublicBookingFormController::class, 'update'])->name('booking-links.update');
     Route::patch('/booking-links/{publicBookingForm}/extend', [PublicBookingFormController::class, 'extend'])->name('booking-links.extend');
     Route::patch('/booking-links/{publicBookingForm}/deactivate', [PublicBookingFormController::class, 'deactivate'])->name('booking-links.deactivate');
     Route::resource('bookings', BookingController::class);
