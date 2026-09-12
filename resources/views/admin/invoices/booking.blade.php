@@ -198,7 +198,7 @@
             </tr>
         </table>
 
-        <div class="pay-card">
+        <div class="pay-card" style="page-break-before: always; break-before: page;">
             <div class="pay-title">Informasi Pembayaran</div>
             @forelse($accounts as $account)
                 @php
