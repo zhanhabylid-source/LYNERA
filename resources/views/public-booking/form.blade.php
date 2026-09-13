@@ -13,9 +13,9 @@
         $termsTitle = trim((string) ($terms['title'] ?? 'Syarat & Ketentuan Booking'));
         $termsContent = trim((string) ($terms['content'] ?? ''));
     @endphp
-    <main class="py-10 px-[18px] sm:px-6">
-        <div class="max-w-xl mx-auto">
-            <div class="bg-white rounded-2xl border border-rose-100 shadow-xl p-6">
+    <main class="py-6 sm:py-10 px-4 sm:px-6">
+        <div class="w-full max-w-2xl mx-auto">
+            <div class="overflow-hidden rounded-2xl border border-rose-100 bg-white p-4 shadow-xl sm:p-6 lg:p-7">
                 <h1 class="text-2xl font-semibold text-stone-900">Formulir Booking</h1>
                 <p class="mt-1 text-sm text-stone-600">Silakan lengkapi formulir berikut. Tautan ini akan kedaluwarsa pada {{ $form->expires_at->format('d M Y H:i') }}.</p>
 
@@ -53,18 +53,74 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-stone-700">Layanan</label>
-                        <select name="service_id" required class="mt-1 w-full rounded-xl border-stone-300 focus:border-rose-400 focus:ring-rose-300">
-                            <option value="">Pilih layanan</option>
-                            @foreach($services as $service)
-                                <option value="{{ $service->id }}" @selected(old('service_id') == $service->id)>
-                                    {{ $service->name }} - Rp {{ number_format((float) $service->price, 0, ',', '.') }} ({{ $service->duration }} menit)
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('service_id') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
-                    </div>
+                      @php
+                          $servicesCatalog = $services->map(function ($service) {
+                              return [
+                                  'id' => $service->id,
+                                  'name' => $service->name,
+                                  'price' => (float) $service->price,
+                                  'duration' => (int) $service->duration,
+                              ];
+                          })->values();
+
+                          $oldServiceRows = old('services', []);
+
+                          if (!is_array($oldServiceRows) || count($oldServiceRows) === 0) {
+                              $oldServiceRows = old('service_id')
+                                  ? [[
+                                      'service_id' => (int) old('service_id'),
+                                      'people_count' => max(1, (int) old('people_count', 1)),
+                                  ]]
+                                  : [[
+                                      'service_id' => '',
+                                      'people_count' => 1,
+                                  ]];
+                          }
+                      @endphp
+
+                      <div>
+                          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                  <label class="block text-sm font-medium text-stone-700">Layanan dan Jumlah Orang</label>
+                                  <p class="mt-1 text-xs text-stone-500">Tambahkan layanan lain bila diperlukan.</p>
+                              </div>
+
+                              <button
+                                  type="button"
+                                  id="add-public-service-row"
+                                  class="inline-flex items-center justify-center self-start rounded-lg bg-rose-100 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-200"
+                              >
+                                  + Layanan
+                              </button>
+                          </div>
+
+                          <div id="public-service-rows" class="mt-3 space-y-3"></div>
+
+                          @error('services')
+                              <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                          @enderror
+
+                          @error('services.*.service_id')
+                              <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                          @enderror
+
+                          @error('services.*.people_count')
+                              <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                          @enderror
+
+                          <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div class="rounded-xl border border-stone-200 bg-stone-50 p-4">
+                                  <p class="text-xs text-stone-500">Total orang</p>
+                                  <p id="public-total-people" class="mt-1 text-lg font-semibold text-stone-900">0</p>
+                              </div>
+
+                              <div class="rounded-xl border border-stone-200 bg-stone-50 p-4">
+                                  <p class="text-xs text-stone-500">Perkiraan selesai</p>
+                                  <p id="public-estimated-end" class="mt-1 text-lg font-semibold text-stone-900">-</p>
+                              </div>
+                          </div>
+                      </div>
+
 
                     <div>
                         <label class="block text-sm font-medium text-stone-700">Jenis Layanan</label>
@@ -88,12 +144,7 @@
                         @error('service_location') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-stone-700">Jumlah Orang</label>
-                            <input type="number" min="1" max="20" name="people_count" value="{{ old('people_count', 1) }}" required class="mt-1 w-full rounded-xl border-stone-300 focus:border-rose-400 focus:ring-rose-300">
-                            @error('people_count') <p class="text-sm text-red-600 mt-1">{{ $message }}</p> @enderror
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-stone-700">Tanggal</label>
                             <input type="date" name="booking_date" value="{{ old('booking_date') }}" required class="mt-1 w-full rounded-xl border-stone-300 focus:border-rose-400 focus:ring-rose-300" data-testid="public-booking-date-input">
@@ -304,5 +355,218 @@
             syncLokasiMode();
         });
     </script>
+
+<script>
+    const publicMultiServiceInit = true;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const rowsContainer = document.getElementById('public-service-rows');
+        const addButton = document.getElementById('add-public-service-row');
+        const totalPeopleOutput = document.getElementById('public-total-people');
+        const endOutput = document.getElementById('public-estimated-end');
+
+        if (!rowsContainer) {
+            console.error('Public Booking: #public-service-rows tidak ditemukan.');
+            return;
+        }
+
+        const services = @json($servicesCatalog);
+        const oldRows = @json($oldServiceRows);
+
+        let rowIndex = 0;
+
+        function formatRupiah(value) {
+            return new Intl.NumberFormat('id-ID').format(value);
+        }
+
+        function buildOptions(selectedId) {
+            let html = '<option value="">Pilih layanan</option>';
+
+            services.forEach(function (service) {
+                const selected =
+                    String(service.id) === String(selectedId)
+                        ? ' selected'
+                        : '';
+
+                html += `
+                    <option
+                        value="${service.id}"
+                        data-duration="${service.duration}"
+                        ${selected}
+                    >
+                        ${service.name} - Rp ${formatRupiah(service.price)}
+                        (${service.duration} menit)
+                    </option>
+                `;
+            });
+
+            return html;
+        }
+
+        function updatePreview() {
+            let totalPeople = 0;
+            let totalDuration = 0;
+
+            rowsContainer.querySelectorAll('[data-service-row]').forEach(function (row) {
+                const serviceSelect = row.querySelector('.public-service-select');
+                const peopleInput = row.querySelector('.public-people-count');
+
+                if (!serviceSelect || !serviceSelect.value) {
+                    return;
+                }
+
+                const option = serviceSelect.options[serviceSelect.selectedIndex];
+
+                const people = Math.max(
+                    1,
+                    parseInt(peopleInput?.value || '1', 10)
+                );
+
+                const duration = Math.max(
+                    0,
+                    parseInt(option?.dataset?.duration || '0', 10)
+                );
+
+                totalPeople += people;
+                totalDuration += duration * people;
+            });
+
+            if (totalPeopleOutput) {
+                totalPeopleOutput.textContent = String(totalPeople);
+            }
+
+            const timeInput = document.querySelector('[name="booking_time"]');
+            const timeValue = timeInput ? timeInput.value : '';
+
+            if (!timeValue || totalDuration <= 0) {
+                if (endOutput) {
+                    endOutput.textContent = '-';
+                }
+                return;
+            }
+
+            const parts = timeValue.split(':').map(Number);
+
+            if (parts.length < 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) {
+                if (endOutput) {
+                    endOutput.textContent = '-';
+                }
+                return;
+            }
+
+            const start = new Date(2000, 0, 1, parts[0], parts[1]);
+            start.setMinutes(start.getMinutes() + totalDuration);
+
+            if (endOutput) {
+                endOutput.textContent =
+                    String(start.getHours()).padStart(2, '0') +
+                    ':' +
+                    String(start.getMinutes()).padStart(2, '0');
+            }
+        }
+
+        function addRow(serviceId = '', peopleCount = 1) {
+            const row = document.createElement('div');
+
+            row.setAttribute('data-service-row', '');
+            row.className =
+                'grid grid-cols-1 sm:grid-cols-12 gap-3 rounded-xl border border-rose-100 bg-rose-50/40 p-3';
+
+            row.innerHTML = `
+                <div class="min-w-0 sm:col-span-7">
+                    <label class="block text-xs font-medium text-stone-600">
+                        Layanan
+                    </label>
+
+                    <select
+                        name="services[${rowIndex}][service_id]"
+                        class="public-service-select mt-1 block w-full max-w-full rounded-xl border-stone-300 focus:border-rose-400 focus:ring-rose-300"
+                    >
+                        ${buildOptions(serviceId)}
+                    </select>
+                </div>
+
+                <div class="sm:col-span-3">
+                    <label class="block text-xs font-medium text-stone-600">
+                        Jumlah Orang
+                    </label>
+
+                    <input
+                        type="number"
+                        name="services[${rowIndex}][people_count]"
+                        min="1"
+                        max="20"
+                        value="${Math.max(1, parseInt(peopleCount || 1, 10))}"
+                        class="public-people-count mt-1 block w-full rounded-xl border-stone-300 focus:border-rose-400 focus:ring-rose-300"
+                    >
+                </div>
+
+                <div class="sm:col-span-2 flex items-end">
+                    <button
+                        type="button"
+                        class="remove-public-service-row w-full rounded-xl border border-stone-300 px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100"
+                    >
+                        Hapus
+                    </button>
+                </div>
+            `;
+
+            rowsContainer.appendChild(row);
+
+            rowIndex++;
+
+            updatePreview();
+        }
+
+        addButton?.addEventListener('click', function () {
+            addRow('', 1);
+        });
+
+        rowsContainer.addEventListener('change', function (event) {
+            if (event.target.classList.contains('public-service-select')) {
+                updatePreview();
+            }
+        });
+
+        rowsContainer.addEventListener('input', function (event) {
+            if (event.target.classList.contains('public-people-count')) {
+                updatePreview();
+            }
+        });
+
+        rowsContainer.addEventListener('click', function (event) {
+            if (!event.target.classList.contains('remove-public-service-row')) {
+                return;
+            }
+
+            const rows = rowsContainer.querySelectorAll('[data-service-row]');
+
+            if (rows.length <= 1) {
+                return;
+            }
+
+            event.target.closest('[data-service-row]')?.remove();
+
+            updatePreview();
+        });
+
+        document
+            .querySelector('[name="booking_time"]')
+            ?.addEventListener('input', updatePreview);
+
+        if (Array.isArray(oldRows) && oldRows.length > 0) {
+            oldRows.forEach(function (row) {
+                addRow(
+                    row.service_id || '',
+                    row.people_count || 1
+                );
+            });
+        } else {
+            addRow('', 1);
+        }
+
+        updatePreview();
+    });
+</script>
 </body>
 </html>
