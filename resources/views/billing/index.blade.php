@@ -173,7 +173,7 @@
                                                 </div>
                                                 @if($method->account_name)<p class="mt-2 text-xs text-stone-600">Atas nama: {{ $method->account_name }}</p>@endif
                                                 @if($method->account_number)<p class="text-sm font-semibold text-stone-900">{{ $method->account_number }}</p>@endif
-                                                @if($method->qrCodeUrl())<img src="{{ $method->qrCodeUrl() }}" alt="QRIS {{ $method->provider_name }}" class="mt-3 h-40 w-40 rounded-xl border border-stone-200 bg-white object-contain p-2">@endif
+                                                @if($method->qrCodeUrl())<img src="{{ $method->qrCodeUrl() }}" alt="QRIS {{ $method->provider_name }}" class="mt-3 mx-auto h-64 w-64 sm:h-72 sm:w-72 lg:h-80 lg:w-80 rounded-xl border border-stone-200 bg-white object-contain p-2">@endif
                                                 @if($method->contact)<p class="mt-2 text-xs text-stone-600">Konfirmasi: {{ $method->contact }}</p>@endif
                                                 @if($method->instructions)<p class="mt-2 text-xs leading-relaxed text-stone-600">{{ $method->instructions }}</p>@endif
                                             </div>
